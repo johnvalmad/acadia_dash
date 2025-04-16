@@ -5,4 +5,5 @@ __pycache__/
 secrets.toml
 .vscode/
 .DS_Store
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
