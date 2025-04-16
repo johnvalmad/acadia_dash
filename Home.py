@@ -54,13 +54,37 @@ def get_sales_data():
         conn.close()
 
 # MAIN DASHBOARD LOGIC
-# ============================================
+
 def main():
     st.set_page_config(
         page_title="📊 Sales Dashboard",
         layout="wide",
         initial_sidebar_state="expanded"
     )
+
+# LOGO
+# ============================================
+    st.markdown(
+        """
+        <style>
+        .logo-container {
+            position: fixed;
+            top: 0px; 
+            left: 0px;
+            z-index: 100;
+            padding: 5px;
+            background-color: white;
+        }
+        </style>
+        <div class="logo-container">
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Load and display the image using Streamlit
+    st.image("logo.png", width=170)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
     st.title("Sales Performance Dashboard")
 
