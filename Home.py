@@ -25,13 +25,17 @@ def init_connection():
 
 # DATA FETCHING FUNCTION 
 # ============================================
-@st.cache_data(ttl=3600)
 def get_sales_data():
-    conn = init_connection()
-    if not conn:
-        return pd.DataFrame()
-
     try:
+        conn = psycopg2.connect(
+            host=st.secrets["postgres"]["host"],
+            port=st.secrets["postgres"]["port"],
+            dbname=st.secrets["postgres"]["database"],
+            user=st.secrets["postgres"]["username"],
+            password=st.secrets["postgres"]["password"],
+            sslmode="require"
+        )
+
         query = """
             SELECT 
                 ds.*,
@@ -43,15 +47,14 @@ def get_sales_data():
             LEFT JOIN department d ON ds.department_id = d.department_id
             LEFT JOIN segment s ON ds.segment_id = s.segment_id
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            df = pd.read_sql(query, conn)
-            return df
+        df = pd.read_sql(query, conn)
+        return df
     except Exception as e:
         st.error(f"🔴 Data query failed: {str(e)}")
         return pd.DataFrame()
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 # MAIN DASHBOARD LOGIC
 
