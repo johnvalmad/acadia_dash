@@ -5,31 +5,29 @@ import psycopg2
 from psycopg2 import sql
 import warnings
 
-
 # DATABASE CONNECTION
 # ============================================
-def get_db_connection():
+@st.cache_resource
+def init_connection():
     try:
         conn = psycopg2.connect(
-            host=st.secrets["DB_HOST"],
-            dbname=st.secrets["DB_NAME"],
-            user=st.secrets["DB_USER"],
-            password=st.secrets["DB_PASSWORD"],
-            port=st.secrets["DB_PORT"],
-            sslmode="require",
-            connect_timeout=5
+            host=st.secrets["postgres"]["host"],
+            port=st.secrets["postgres"]["port"],
+            dbname=st.secrets["postgres"]["database"],
+            user=st.secrets["postgres"]["username"],
+            password=st.secrets["postgres"]["password"],
+            sslmode="require"  # Supabase exige SSL
         )
         return conn
     except Exception as e:
-        st.error(f"🔴 Connection failed. Verify: 1) secrets.toml keys 2) Values match Supabase 3) IP whitelisted. Error: {str(e)}")
-        return None
-
+        st.error(f"Erro ao conectar ao banco: {e}")
+        st.stop()
 
 # DATA FETCHING FUNCTION 
 # ============================================
 @st.cache_data(ttl=3600)
 def get_sales_data():
-    conn = get_db_connection()
+    conn = init_connection()
     if not conn:
         return pd.DataFrame()
 
@@ -55,10 +53,8 @@ def get_sales_data():
     finally:
         conn.close()
 
-
-# MAIN DASHBOARD
+# MAIN DASHBOARD LOGIC
 # ============================================
-
 def main():
     st.set_page_config(
         page_title="📊 Sales Dashboard",
@@ -106,11 +102,9 @@ def main():
     if "All" not in selected_segments:
         filtered_df = filtered_df[filtered_df["segment_description"].isin(selected_segments)]
 
-
     # ========= METRIC CARDS =========
     st.subheader("How is the business perfoming?")
 
-    # Inject CSS for card style
     st.markdown("""
     <style>
     .metric-card {
@@ -141,8 +135,7 @@ def main():
         margin-top: 0.3rem;
     }
     </style>
-""", unsafe_allow_html=True)
-
+    """, unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -204,7 +197,6 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
-
     st.divider() 
 
     st.subheader("Understanding our numbers breakdown")
@@ -254,13 +246,11 @@ def main():
     st.markdown("---")
     spacer_col, col1, col2 = st.columns([0.2, 1, 1])
 
-    # ===== Heatmap =====
     with col1:
         st.markdown(
             "<h3 style='text-align: center; margin-bottom: 20px;'>Revenue Heatmap</h3>",
             unsafe_allow_html=True
         )
-
 
         heatmap_df = (
             filtered_df.groupby(["department_description", "segment_description"])
@@ -284,8 +274,6 @@ def main():
 
         st.altair_chart(heatmap_chart, use_container_width=False)
 
-
-    # ===== Funnel Chart =====
     with col2:
         st.markdown(
             "<h3 style='text-align: center; margin-bottom: 20px;'>Our solid customer numbers</h3>",
@@ -299,11 +287,9 @@ def main():
             .sort_values(by="total_customers", ascending=False)
         )
 
-        max_customers = funnel_df["total_customers"].max()
         funnel_df["width"] = funnel_df["total_customers"] / funnel_df["total_customers"].max()
         funnel_df["x_start"] = (1 - funnel_df["width"]) / 2
         funnel_df["x_end"] = funnel_df["x_start"] + funnel_df["width"]
-
 
         col_spacer, col_funnel = st.columns([0.2, 1.8])
 
@@ -311,7 +297,7 @@ def main():
             funnel = alt.Chart(funnel_df).mark_bar().encode(
                 y=alt.Y("segment_description:N", 
                         sort=alt.EncodingSortField(field="total_customers", order="descending"), 
-                            title="Segment"),
+                        title="Segment"),
                 x=alt.X("x_start:Q", axis=None, title=""),
                 x2=alt.X2("x_end:Q"),
                 color=alt.Color("segment_description:N", legend=None, scale=alt.Scale(scheme="blues")),
@@ -328,9 +314,9 @@ def main():
 
             st.altair_chart(funnel, use_container_width=False)
 
+    # Footer
+    st.markdown("---")
+    st.caption(f"Developed by Joao Almada @ Data automatically updated in: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}")
+
 if __name__ == "__main__":
     main()
-
-# Footer
-st.markdown("---")
-st.caption(f" Developed by Joao Almada @ Data automatically updated in: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}")
