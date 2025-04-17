@@ -16,26 +16,18 @@ def init_connection():
             dbname=st.secrets["postgres"]["database"],
             user=st.secrets["postgres"]["username"],
             password=st.secrets["postgres"]["password"],
-            sslmode="require"  # Supabase exige SSL
+            sslmode="require"
         )
         return conn
     except Exception as e:
         st.error(f"Erro ao conectar ao banco: {e}")
         st.stop()
 
-# DATA FETCHING FUNCTION 
+# DATA FETCHING FUNCTION
 # ============================================
 def get_sales_data():
+    conn = init_connection()
     try:
-        conn = psycopg2.connect(
-            host=st.secrets["postgres"]["host"],
-            port=st.secrets["postgres"]["port"],
-            dbname=st.secrets["postgres"]["database"],
-            user=st.secrets["postgres"]["username"],
-            password=st.secrets["postgres"]["password"],
-            sslmode="require"
-        )
-
         query = """
             SELECT 
                 ds.*,
@@ -52,9 +44,7 @@ def get_sales_data():
     except Exception as e:
         st.error(f"🔴 Data query failed: {str(e)}")
         return pd.DataFrame()
-    finally:
-        if conn:
-            conn.close()
+
 
 # MAIN DASHBOARD LOGIC
 
